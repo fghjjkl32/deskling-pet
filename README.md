@@ -88,8 +88,8 @@ A Deskling skin works as is; only rename its `done` image to `happy`.
 
 Two scripts turn drawings into a skin (both need Python with Pillow; the first also needs numpy and scipy):
 
-- `scripts/sheet-to-skin.py art/boy skins/my-pet "My Pet"` takes a folder with `original.png` and one sprite sheet per pose (`idle.png`, `walk.png`, ...), each a single row of frames on a white or transparent background. It removes the background, cuts the frames, and matches their size to the original drawing. The Boy was made this way.
-- `scripts/make-skin.py drawing.png skins/my-pet "My Pet"` animates one still drawing by moving and tilting it. The Girl was made this way.
+- `scripts/sheet-to-skin.py art/girl skins/my-pet "My Pet"` takes a folder with one sprite sheet per pose (`idle.png`, `walk.png`, ...; `idle.png` is required), each a single row of frames on a white or transparent background. It removes the background, cuts the frames, and makes the character the same size in every pose. Both bundled characters were made this way.
+- `scripts/make-skin.py drawing.png skins/my-pet "My Pet"` animates one still drawing by moving and tilting it, for when you have only one drawing.
  Then pick your skin from the **Skin** menu. Only share images you have the right to share.
 
 ## Uninstall

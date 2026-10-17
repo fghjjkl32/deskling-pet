@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Turns sprite sheets of a character into a Deskling Pet skin.
 
-The character folder holds original.png (the reference drawing) and one sheet
-per pose, named after the pose (idle.png, walk.png, ...). Each sheet is one row
-of frames on a white or transparent background, as image generators make them.
+The character folder holds one sheet per pose, named after the pose (idle.png,
+walk.png, ...); idle.png is required. Each sheet is one row of frames on a white
+or transparent background, as image generators make them.
 
 For every sheet this script removes the background, cuts the row into frames at
-the emptiest columns, and scales the frames so the hair is as wide as in the
-reference drawing, which keeps the character the same size in every pose.
+the emptiest columns, and drops slivers of a neighboring frame. Image generators
+draw each sheet at its own scale, so poses where the character stands upright are
+scaled to STANDING_HEIGHT, and the others are scaled so the crown of the head is
+as wide as in the idle pose.
 Frames keep their height above the sheet's lowest point, so jumps stay jumps,
 and are centered on the hair, so the head does not wobble sideways.
 All poses share one canvas, which keeps the pet window the same size.
@@ -23,15 +25,16 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
-# Pose: (frames in the sheet, seconds per frame).
+# Pose: (frames in the sheet, seconds per frame, how its size is matched).
+# "height" scales the full figure to STANDING_HEIGHT; "crown" matches the idle pose's head.
 POSES = {
-    "idle": (6, 0.25),
-    "walk": (8, 0.11),
-    "happy": (6, 0.12),
-    "working": (4, 0.2),
-    "waiting": (6, 0.15),
-    "drag": (4, 0.15),
-    "fall": (4, 0.2),
+    "idle": (6, 0.25, "height"),
+    "walk": (8, 0.11, "height"),
+    "happy": (6, 0.12, "crown"),
+    "working": (4, 0.2, "crown"),
+    "waiting": (6, 0.15, "height"),
+    "drag": (4, 0.15, "crown"),
+    "fall": (4, 0.2, "height"),
 }
 
 # Height of the standing character on the canvas, in pixels. The canvas is
@@ -81,11 +84,29 @@ def split(pixels, count):
         expected = cell * index
         cuts.append(int(candidates[np.argmin(np.abs(candidates - expected))]))
     cuts.append(width)
-    return [pixels[:, a:b] for a, b in zip(cuts, cuts[1:])]
+    return [without_slivers(pixels[:, a:b]) for a, b in zip(cuts, cuts[1:])]
+
+
+def without_slivers(frame):
+    """Clears pieces that touch the left or right edge, other than the figure itself.
+
+    Those are parts of a neighboring frame that reached across the cut."""
+    solid = frame[..., 3] > 0
+    labels, count = ndimage.label(solid, structure=np.ones((3, 3)))
+    if count < 2:
+        return frame
+    figure = np.argmax(ndimage.sum(solid, labels, range(1, count + 1))) + 1
+    edges = set(np.unique(np.concatenate([labels[:, 0], labels[:, -1]]))) - {0, figure}
+    out = frame.copy()
+    out[..., 3] = np.where(np.isin(labels, list(edges)), 0, out[..., 3])
+    return out
 
 
 def hair(pixels):
-    """The bounding box (left, top, right, bottom) of the biggest patch of brown hair."""
+    """The crown of the head: left, top, right and bottom of the top 30% of the biggest patch of brown hair.
+
+    Only the crown is measured because long hair flies out sideways when the character jumps or dangles,
+    while the crown keeps the width of the head."""
     r, g, b, a = (pixels[..., i] for i in range(4))
     brown = (a > 128) & (r >= 60) & (r <= 200) & (g >= 25) & (g <= 125) & (b <= 90) & (r - g >= 35) & (g - b >= 8)
     labels, count = ndimage.label(brown)
@@ -93,7 +114,8 @@ def hair(pixels):
         raise SystemExit("no hair found in a frame")
     sizes = ndimage.sum(brown, labels, range(1, count + 1))
     ys, xs = np.nonzero(labels == np.argmax(sizes) + 1)
-    return xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
+    crown = ys < ys.min() + (ys.max() + 1 - ys.min()) * 0.3
+    return xs[crown].min(), ys.min(), xs[crown].max() + 1, ys[crown].max() + 1
 
 
 def main():
@@ -101,20 +123,31 @@ def main():
         sys.exit("usage: sheet-to-skin.py <character-dir> <skin-dir> <display-name>")
     source, target = Path(sys.argv[1]), Path(sys.argv[2])
 
-    reference = remove_background(rgba(source / "original.png"))
-    ys, _ = np.nonzero(reference[..., 3])
-    left, _, right, _ = hair(reference)
-    hair_width = (right - left) * STANDING_HEIGHT / (ys.max() + 1 - ys.min())
-
-    # Every frame as (image, x of the hair center, y of the pose's ground), already scaled.
-    poses = {}
-    for name, (count, delay) in POSES.items():
+    sheets = {}
+    for name, (count, delay, match) in POSES.items():
         sheet = source / f"{name}.png"
-        if not sheet.exists():
-            continue
-        frames = split(remove_background(rgba(sheet)), count)
-        boxes = [hair(frame) for frame in frames]
-        scale = hair_width / np.median([box[2] - box[0] for box in boxes])
+        if sheet.exists():
+            frames = split(remove_background(rgba(sheet)), count)
+            sheets[name] = (frames, [hair(frame) for frame in frames], delay, match)
+    if "idle" not in sheets:
+        sys.exit("idle.png is required")
+
+    def median_height(frames):
+        return np.median([np.ptp(np.nonzero(frame[..., 3])[0]) + 1 for frame in frames])
+
+    def median_crown(boxes):
+        return np.median([box[2] - box[0] for box in boxes])
+
+    idle_frames, idle_boxes, _, _ = sheets["idle"]
+    crown_width = median_crown(idle_boxes) * STANDING_HEIGHT / median_height(idle_frames)
+
+    # Every frame as (image, x of the crown's center, y of the pose's ground), already scaled.
+    poses = {}
+    for name, (frames, boxes, delay, match) in sheets.items():
+        if match == "height":
+            scale = STANDING_HEIGHT / median_height(frames)
+        else:
+            scale = crown_width / median_crown(boxes)
         ground = max(np.nonzero(frame[..., 3])[0].max() + 1 for frame in frames)
         scaled = []
         for frame, box in zip(frames, boxes):

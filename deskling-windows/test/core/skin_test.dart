@@ -187,13 +187,8 @@ void main() {
 
   test('the bundled skins load with their animations', () {
     const bundled = {
-      'boy': (name: 'Boy', height: 118.0, poses: PetPose.values, frames: [6, 8, 6]),
-      'girl': (
-        name: 'Girl',
-        height: 130.0,
-        poses: [PetPose.idle, PetPose.walk, PetPose.happy, PetPose.working, PetPose.waiting, PetPose.drag],
-        frames: [16, 8, 16],
-      ),
+      'boy': (name: 'Boy', height: 128.0, poses: PetPose.values, frames: [6, 8, 6]),
+      'girl': (name: 'Girl', height: 148.0, poses: PetPose.values, frames: [6, 8, 6]),
     };
     for (final MapEntry(key: id, value: expected) in bundled.entries) {
       final skin = SkinLoader.load(p.join('assets', 'skins', id))!;

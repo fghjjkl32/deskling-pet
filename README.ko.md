@@ -88,8 +88,8 @@ Deskling 스킨도 그대로 쓸 수 있습니다. `done` 그림의 이름만 `h
 
 그림으로 스킨을 만드는 스크립트가 두 개 있습니다. 둘 다 Pillow가 설치된 Python이 필요하고, 첫 번째는 numpy와 scipy도 필요합니다.
 
-- `scripts/sheet-to-skin.py art/boy skins/my-pet "My Pet"`: `original.png`와 동작별 스프라이트 시트(`idle.png`, `walk.png` 등)가 든 폴더를 받습니다. 시트는 흰색이나 투명한 배경에 프레임을 한 줄로 늘어놓은 그림입니다. 배경을 지우고 프레임을 자른 다음, 크기를 원본 그림에 맞춥니다. 남자아이는 이 방법으로 만들었습니다.
-- `scripts/make-skin.py drawing.png skins/my-pet "My Pet"`: 정지 그림 한 장을 움직이고 기울여서 동작을 만듭니다. 여자아이는 이 방법으로 만들었습니다.
+- `scripts/sheet-to-skin.py art/girl skins/my-pet "My Pet"`: 동작별 스프라이트 시트(`idle.png`, `walk.png` 등)가 든 폴더를 받습니다. `idle.png`는 꼭 있어야 합니다. 시트는 흰색이나 투명한 배경에 프레임을 한 줄로 늘어놓은 그림입니다. 배경을 지우고 프레임을 자른 다음, 모든 동작에서 캐릭터 크기가 같아지도록 맞춥니다. 기본 캐릭터 둘 다 이 방법으로 만들었습니다.
+- `scripts/make-skin.py drawing.png skins/my-pet "My Pet"`: 정지 그림 한 장을 움직이고 기울여서 동작을 만듭니다. 그림이 한 장뿐일 때 씁니다.
  그다음 **스킨** 메뉴에서 고릅니다. 공유할 권리가 있는 그림만 공유해야 합니다.
 
 ## 삭제하기

@@ -184,11 +184,10 @@ final class SkinTests: XCTestCase {
         let frames: [Int]
     }
 
-    /// The boy is drawn frame by frame and has every pose. The girl is animated from one drawing and
-    /// ships no `fall` image, so she borrows the `drag` swing.
+    /// Both characters are drawn frame by frame and have every pose.
     private static let bundledSkins = [
-        "boy": Bundled(name: "Boy", height: 118, poses: PetPose.allCases, frames: [6, 8, 6]),
-        "girl": Bundled(name: "Girl", height: 130, poses: [.idle, .walk, .happy, .working, .waiting, .drag], frames: [16, 8, 16]),
+        "boy": Bundled(name: "Boy", height: 128, poses: PetPose.allCases, frames: [6, 8, 6]),
+        "girl": Bundled(name: "Girl", height: 148, poses: PetPose.allCases, frames: [6, 8, 6]),
     ]
 
     private var repository: URL {
