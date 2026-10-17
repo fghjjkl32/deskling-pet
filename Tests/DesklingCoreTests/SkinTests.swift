@@ -177,7 +177,7 @@ final class SkinTests: XCTestCase {
     }
 
     /// The default skin ships no `drag` or `fall` image; both borrow its walk cycle.
-    private static let bundledPoses: [PetPose] = [.idle, .walk, .happy]
+    private static let bundledPoses: [PetPose] = [.idle, .walk, .happy, .working, .waiting]
 
     func testBundledDefaultSkinLoadsWithAnimations() throws {
         let repository = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()

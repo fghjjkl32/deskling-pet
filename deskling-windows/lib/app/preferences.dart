@@ -15,6 +15,9 @@ class Preferences {
   double get sizeScale => _store.getDouble('sizeScale') ?? 1.0;
   set sizeScale(double value) => _store.setDouble('sizeScale', value);
 
+  bool get stretchEnabled => _store.getBool('stretchEnabled') ?? false;
+  set stretchEnabled(bool value) => _store.setBool('stretchEnabled', value);
+
   bool get petHidden => _store.getBool('petHidden') ?? false;
   set petHidden(bool value) => _store.setBool('petHidden', value);
 

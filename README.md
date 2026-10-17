@@ -4,6 +4,8 @@ A desktop pet for macOS and Windows.
 
 Deskling Pet walks along the bottom of your screen and takes a rest now and then. It needs nothing else to run: no account, no network, no other app.
 
+- Start a 25-minute focus session; the pet works beside you and tells you when to take a 5-minute break.
+- Set a timer, or have the pet remind you every hour to stand up and stretch.
 - Click the pet to make it happy.
 - Hold the pet to make it run, and let go in mid-air to watch it float down.
 - Double-click or right-click the pet to open its menu.
@@ -44,6 +46,18 @@ Requires 64-bit Windows 10 or 11.
 
 The pet walks along the taskbar. If the paw icon is hidden, click **^** in the notification area.
 
+## Focus, timer and stretch reminders
+
+Open the menu from the paw icon or by double-clicking the pet.
+
+| Menu item | What happens |
+|---|---|
+| **Start Focus (25 min)** | The pet sits down and works. After 25 minutes it tells you to take a break, and after 5 more minutes it tells you the break is over. **Stop Focus** ends the session early. The menu shows the minutes left. |
+| **Timer** | Pick 5, 10, 15, 30 or 60 minutes. The pet tells you when the time is up. **Cancel Timer** stops it. |
+| **Stretch Reminder Every Hour** | Every hour, the pet reminds you to stand up, stretch and drink some water. It stays quiet during a focus session and its break, and counts the next hour from the end of the break. The setting is kept after a restart. |
+
+When a reminder is due, the pet stops and shows a speech bubble. Click the bubble or the pet to dismiss it. While the pet is hidden, reminders still run but no bubble appears.
+
 ## Custom skins
 
 Choose **Skin > Open Skins Folder** from the menu, create a folder, and put your images in it. The folder is `~/Library/Application Support/Deskling Pet/skins/` on macOS and `%APPDATA%\Deskling Pet\skins\` on Windows; the same skin folder works on both.
@@ -53,6 +67,8 @@ skins/my-pet/
   idle.gif      resting (required)
   walk.gif      walking
   happy.gif     after you click the pet
+  working.gif   during a focus session
+  waiting.gif   showing a reminder
   drag.gif      held with the mouse (running)
   fall.gif      floating down after you let go
   skin.json     optional
@@ -64,7 +80,7 @@ skins/my-pet/
 - Draw the pet facing right. Deskling Pet flips it when it walks left.
 - `skin.json` can set a display name and a height in points: `{ "name": "My Pet", "height": 120 }`.
 
-A Deskling skin works too; rename its `done` image to `happy`.
+A Deskling skin works as is; only rename its `done` image to `happy`.
 
 Then pick your skin from the **Skin** menu. Only share images you have the right to share.
 

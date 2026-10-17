@@ -7,9 +7,11 @@ import '../core/layout.dart';
 import '../core/motion.dart';
 import '../core/skin.dart';
 import '../core/strings.dart';
+import 'bubble.dart';
 import 'native.dart';
 
 /// Moves the pet window: walking along the taskbar, following the mouse while held, floating down when let go.
+/// It also sizes the window to hold the speech bubble above the pet.
 class PetController extends ChangeNotifier {
   PetController(this.native, this._skin, this._sizeScale, {double? startX, String? monitorId}) : _walk = WalkModel(0) {
     _applyAspect();
@@ -40,6 +42,9 @@ class PetController extends ChangeNotifier {
   /// Called on a double-click or right-click on the pet.
   VoidCallback? onInspect;
 
+  /// Called when the pet is clicked rather than dragged.
+  VoidCallback? onClicked;
+
   Skin _skin;
   double _sizeScale;
   double _aspect = 1;
@@ -55,17 +60,31 @@ class PetController extends ChangeNotifier {
   Timer? _monitorTimer;
   bool _hidden = false;
   double _happyRemaining = 0;
+  bool _alerting = false;
+  bool _focusing = false;
+  String? _bubbleText;
   PetLayout? _layout;
   ScreenRect? _appliedWindow;
+  List<ScreenRect>? _appliedClickable;
 
   Skin get skin => _skin;
   PetLayout? get layout => _layout;
   bool get facingLeft => _walk.facingLeft;
+  String? get bubbleText => _bubbleText;
 
   bool get _isHappy => _happyRemaining > 0;
 
-  PetPose get pose =>
-      PetPresentation.pose(isWalking: _walk.isWalking, isHeld: _dragging, isFalling: _fall != null, isHappy: _isHappy);
+  /// Alerts and focus phases keep the pet standing still.
+  bool get _isBusy => _alerting || _focusing;
+
+  PetPose get pose => PetPresentation.pose(
+        isWalking: _walk.isWalking,
+        isHeld: _dragging,
+        isFalling: _fall != null,
+        isHappy: _isHappy,
+        isAlerting: _alerting,
+        isFocusing: _focusing,
+      );
 
   double get _petHeight => _skin.height * _sizeScale;
   double get _petWidth => _petHeight * _aspect;
@@ -83,6 +102,28 @@ class PetController extends ChangeNotifier {
     _timer?.cancel();
     _monitorTimer?.cancel();
     super.dispose();
+  }
+
+  /// Shows a reminder: the `waiting` pose and, when `bubbleText` is set, the bubble.
+  set alerting(bool value) {
+    if (value == _alerting) return;
+    _alerting = value;
+    if (value) _walk.stop();
+    _tick(0);
+  }
+
+  /// A focus phase is running: the `working` pose.
+  set focusing(bool value) {
+    if (value == _focusing) return;
+    _focusing = value;
+    if (value) _walk.stop();
+    _tick(0);
+  }
+
+  set bubbleText(String? value) {
+    if (value == _bubbleText) return;
+    _bubbleText = value;
+    _tick(0);
   }
 
   set hidden(bool value) {
@@ -137,6 +178,7 @@ class PetController extends ChangeNotifier {
     final moved = Native.cursor() - _dragCursorStart;
     if (moved.x.abs() <= clickSlop && moved.y.abs() <= clickSlop) {
       _happyRemaining = happyDuration;
+      onClicked?.call();
     }
     final monitor = _currentMonitor();
     final floor = monitor.work.bottom - (_petHeight * monitor.scale).round();
@@ -180,7 +222,7 @@ class PetController extends ChangeNotifier {
         if (fall.hasLanded) _fall = null;
         y = floor - (fall.height * scale).round();
         _walk.clamp(bounds);
-      } else if (!_isHappy) {
+      } else if (!_isHappy && !_isBusy) {
         _walk.step(dt, bounds);
       } else {
         _walk.clamp(bounds);
@@ -188,11 +230,29 @@ class PetController extends ChangeNotifier {
       _origin = Point((_walk.x * scale).round(), y);
     }
 
-    final layout = PetLayout.compute(scale: scale, petOrigin: _origin, petWidth: _petWidth, petHeight: _petHeight);
+    final text = _bubbleText;
+    final bubbleSize = text == null ? null : Bubble.measure(text);
+    final layout = PetLayout.compute(
+      work: monitor.work,
+      scale: scale,
+      petOrigin: _origin,
+      petWidth: _petWidth,
+      petHeight: _petHeight,
+      bubbleWidth: bubbleSize?.width,
+      bubbleHeight: bubbleSize?.height,
+    );
     _layout = layout;
     if (layout.window != _appliedWindow) {
       native.setFrame(layout.window);
       _appliedWindow = layout.window;
+    }
+    if (!listEquals(layout.clickable, _appliedClickable)) {
+      // The pet keeps square corners so its feet and ears are never cut; only the bubble is rounded.
+      final corner = (Bubble.cornerRadius * 2 * scale).round();
+      native.setClickableArea(layout.clickable.isEmpty
+          ? null
+          : [for (final (index, rect) in layout.clickable.indexed) (rect, index == 0 ? 0 : corner)]);
+      _appliedClickable = layout.clickable;
     }
     notifyListeners();
   }

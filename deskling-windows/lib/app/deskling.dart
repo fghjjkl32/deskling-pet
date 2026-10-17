@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 
 import '../core/paths.dart';
+import '../core/reminders.dart';
 import '../core/skin.dart';
 import '../core/strings.dart';
 import 'login_item.dart';
@@ -14,7 +15,7 @@ import 'preferences.dart';
 import 'sprite.dart';
 import 'tray.dart';
 
-/// Wires the pet and the tray together, like the macOS AppDelegate.
+/// Wires the pet, its reminders and the tray together, like the macOS AppDelegate.
 class Deskling {
   Deskling({required this.native, required this.preferences, required this.language});
 
@@ -23,6 +24,10 @@ class Deskling {
   final Language language;
   final paths = AppPaths.current();
   final sprites = SpriteCache();
+  final reminders = Reminders();
+
+  /// The reminder the pet is showing until it or its bubble is clicked.
+  Reminder? _alert;
 
   late final String _defaultSkinDirectory = p.join(
       p.dirname(Platform.resolvedExecutable), 'data', 'flutter_assets', 'assets', 'skins', 'default');
@@ -51,13 +56,38 @@ class Deskling {
         preferences.petX = x;
         preferences.monitorId = monitorId;
       }
+      ..onClicked = clearAlert
       ..onInspect = () => unawaited(tray.popUp());
     pet.hidden = preferences.petHidden;
     pet.start();
 
+    if (preferences.stretchEnabled) reminders.setStretch(enabled: true, now: DateTime.now());
+    Timer.periodic(const Duration(seconds: 1), (_) => _tickReminders());
+
     tray = Tray(language: language, state: _trayState, actions: _trayActions());
     await tray.start();
     return true;
+  }
+
+  // Reminders
+
+  void _tickReminders() {
+    final due = reminders.tick(DateTime.now());
+    if (due.isNotEmpty) _alert = due.last;
+    _refreshPet();
+  }
+
+  void clearAlert() {
+    _alert = null;
+    _refreshPet();
+  }
+
+  /// An alert shows `waiting` and its bubble; a focus phase without one shows `working`. A hidden pet shows no bubble.
+  void _refreshPet() {
+    final alert = _alert;
+    pet.alerting = alert != null;
+    pet.focusing = alert == null && reminders.phase == FocusPhase.focus;
+    pet.bubbleText = alert == null || preferences.petHidden ? null : PetPresentation.message(alert, language);
   }
 
   // Skins
@@ -89,7 +119,14 @@ class Deskling {
     } on Object {
       launchAtLogin = false;
     }
+    final now = DateTime.now();
+    final phaseEnds = reminders.phaseEnds;
+    final timerEnds = reminders.timerEnds;
     return TrayState(
+      phase: reminders.phase,
+      phaseMinutesLeft: phaseEnds == null ? 0 : Reminders.minutesLeft(phaseEnds, now),
+      timerMinutesLeft: timerEnds == null ? null : Reminders.minutesLeft(timerEnds, now),
+      stretchEnabled: reminders.stretchEnabled,
       skins: [SkinItem(null, _t(Txt.defaultSkin)), ...userSkins],
       selectedSkinPath: selected,
       sizeScale: preferences.sizeScale,
@@ -99,6 +136,21 @@ class Deskling {
   }
 
   TrayActions _trayActions() => TrayActions(
+        startFocus: () {
+          reminders.startFocus(DateTime.now());
+          _refreshPet();
+        },
+        stopFocus: () {
+          reminders.stopFocus();
+          _refreshPet();
+        },
+        startTimer: (minutes) => reminders.startTimer(minutes, DateTime.now()),
+        cancelTimer: reminders.cancelTimer,
+        toggleStretch: () {
+          final enabled = !reminders.stretchEnabled;
+          reminders.setStretch(enabled: enabled, now: DateTime.now());
+          preferences.stretchEnabled = enabled;
+        },
         selectSkin: (path) {
           preferences.skinPath = path;
           _applyCurrentSkin();
@@ -114,6 +166,7 @@ class Deskling {
         togglePet: () {
           preferences.petHidden = !preferences.petHidden;
           pet.hidden = preferences.petHidden;
+          _refreshPet();
           unawaited(preferences.petHidden ? windowManager.hide() : windowManager.show(inactive: true));
         },
         toggleLaunchAtLogin: () {

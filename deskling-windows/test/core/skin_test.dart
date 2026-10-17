@@ -94,6 +94,8 @@ void main() {
     final skin = SkinLoader.load(directory)!;
     expect(p.basename(skin.pathFor(PetPose.walk)), 'idle.gif');
     expect(p.basename(skin.pathFor(PetPose.happy)), 'idle.gif');
+    expect(p.basename(skin.pathFor(PetPose.working)), 'idle.gif');
+    expect(p.basename(skin.pathFor(PetPose.waiting)), 'idle.gif');
   });
 
   test('held and falling poses borrow the walk cycle at running speed', () {
@@ -186,7 +188,8 @@ void main() {
   test('the bundled default skin loads with its animations', () {
     final skin = SkinLoader.load(p.join('assets', 'skins', 'default'))!;
     expect(skin.name, 'Deskling Pet');
-    for (final pose in [PetPose.idle, PetPose.walk, PetPose.happy]) {
+    // The default skin ships no `drag` or `fall` image; both borrow its walk cycle.
+    for (final pose in [PetPose.idle, PetPose.walk, PetPose.happy, PetPose.working, PetPose.waiting]) {
       expect(p.basename(skin.pathFor(pose)), '${pose.name}.png');
       expect(SpriteFrames.load(skin.pathFor(pose)), isNotNull, reason: pose.name);
     }

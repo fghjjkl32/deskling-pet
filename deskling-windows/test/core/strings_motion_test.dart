@@ -1,4 +1,5 @@
 import 'package:deskling_pet/core/motion.dart';
+import 'package:deskling_pet/core/reminders.dart';
 import 'package:deskling_pet/core/skin.dart';
 import 'package:deskling_pet/core/strings.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +28,27 @@ void main() {
       expect(PetPresentation.pose(isWalking: true, isHappy: true), PetPose.happy);
       expect(PetPresentation.pose(isWalking: false, isHeld: true, isFalling: true, isHappy: true), PetPose.drag);
       expect(PetPresentation.pose(isWalking: false, isFalling: true, isHappy: true), PetPose.fall);
+    });
+
+    test('happy beats alerting, alerting beats focusing, focusing beats walking', () {
+      expect(PetPresentation.pose(isWalking: true, isAlerting: true, isFocusing: true), PetPose.waiting);
+      expect(PetPresentation.pose(isWalking: true, isFocusing: true), PetPose.working);
+      expect(PetPresentation.pose(isWalking: false, isHappy: true, isAlerting: true), PetPose.happy);
+      expect(PetPresentation.pose(isWalking: false, isFalling: true, isAlerting: true), PetPose.fall);
+      expect(PetPresentation.pose(isWalking: false, isHeld: true, isFocusing: true), PetPose.drag);
+    });
+
+    test('the number is filled in', () {
+      expect(Txt.focusStatus.withNumber(Language.korean, 23), '집중하는 중: 23분 남음');
+      expect(Txt.cancelTimer.withNumber(Language.english, 4), 'Cancel Timer (4 min left)');
+      expect(Txt.timerMinutes.withNumber(Language.english, 15), '15 min');
+    });
+
+    test('every reminder has a message in both languages', () {
+      for (final reminder in Reminder.values) {
+        expect(PetPresentation.message(reminder, Language.korean), isNotEmpty, reason: '$reminder');
+        expect(PetPresentation.message(reminder, Language.english), isNotEmpty, reason: '$reminder');
+      }
     });
   });
 

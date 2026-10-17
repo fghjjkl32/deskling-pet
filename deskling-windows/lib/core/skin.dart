@@ -9,6 +9,8 @@ enum PetPose {
   idle,
   walk,
   happy,
+  working,
+  waiting,
   drag,
   fall;
 

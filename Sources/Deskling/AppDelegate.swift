@@ -5,8 +5,13 @@ import ServiceManagement
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let preferences = Preferences()
     private let language = Language.current()
+    private let bubble = BubbleController()
+    private var reminders = Reminders()
+    /// The reminder on show until the user clicks the bubble or the pet.
+    private var alert: Reminder?
     private var pet: PetWindowController?
     private var menu: StatusMenuController?
+    private var reminderTimer: Timer?
 
     private var isBundled: Bool { Bundle.main.bundleIdentifier != nil }
 
@@ -35,14 +40,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.preferences.screenID = screenID
         }
         pet.onInspect = { [weak self] point, view in self?.menu?.popUp(at: point, in: view) }
+        pet.onClick = { [weak self] in self?.dismissAlert() }
+        pet.onFrameChanged = { [weak self] in self?.render() }
         pet.setHidden(preferences.petHidden)
         pet.start()
         self.pet = pet
+        bubble.onDismiss = { [weak self] in self?.dismissAlert() }
+
+        if preferences.stretchEnabled { reminders.setStretch(enabled: true, at: Date()) }
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.tickReminders() }
+        RunLoop.main.add(timer, forMode: .common)
+        reminderTimer = timer
 
         menu = StatusMenuController(language: language, state: { [unowned self] in self.menuState() }, actions: menuActions())
     }
 
     private func text(_ text: Text) -> String { text.string(language) }
+
+    // MARK: - Reminders
+
+    private func tickReminders() {
+        if let latest = reminders.tick(at: Date()).last {
+            alert = latest
+            bubble.clearDismissal()
+        }
+        render()
+    }
+
+    private func dismissAlert() {
+        guard alert != nil else { return }
+        alert = nil
+        render()
+    }
+
+    private func render() {
+        guard let pet else { return }
+        let focusing = reminders.phase == .focus
+        if pet.isAlerting != (alert != nil) { pet.isAlerting = alert != nil }
+        if pet.isFocusing != focusing { pet.isFocusing = focusing }
+        let message = alert.map { PetPresentation.message(for: $0, language: language) }
+        bubble.update(text: preferences.petHidden ? nil : message, anchor: pet.panel.frame)
+    }
 
     // MARK: - Skins
 
@@ -65,7 +103,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             StatusMenuController.SkinItem(path: $0.directory.path, name: $0.name)
         }
         let selected = userSkins.contains { $0.path == preferences.skinPath } ? preferences.skinPath : nil
+        let now = Date()
         return StatusMenuController.State(
+            phase: reminders.phase.flatMap { phase in
+                reminders.phaseEnds.map { (phase, Reminders.minutesLeft(until: $0, at: now)) }
+            },
+            timerMinutesLeft: reminders.timerEnds.map { Reminders.minutesLeft(until: $0, at: now) },
+            stretchEnabled: reminders.stretchEnabled,
             skins: [StatusMenuController.SkinItem(path: nil, name: text(.defaultSkin))] + userSkins,
             selectedSkinPath: selected,
             scale: preferences.sizeScale,
@@ -76,6 +120,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func menuActions() -> StatusMenuController.Actions {
         StatusMenuController.Actions(
+            toggleFocus: { [unowned self] in
+                if self.reminders.phase == nil {
+                    self.reminders.startFocus(at: Date())
+                } else {
+                    self.reminders.stopFocus()
+                }
+                self.render()
+            },
+            startTimer: { [unowned self] minutes in self.reminders.startTimer(minutes: minutes, at: Date()) },
+            cancelTimer: { [unowned self] in self.reminders.cancelTimer() },
+            toggleStretch: { [unowned self] in
+                self.preferences.stretchEnabled.toggle()
+                self.reminders.setStretch(enabled: self.preferences.stretchEnabled, at: Date())
+            },
             selectSkin: { [unowned self] path in
                 self.preferences.skinPath = path
                 self.applyCurrentSkin()
@@ -91,6 +149,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             togglePet: { [unowned self] in
                 self.preferences.petHidden.toggle()
                 self.pet?.setHidden(self.preferences.petHidden)
+                self.render()
             },
             toggleLaunchAtLogin: { [unowned self] in self.toggleLaunchAtLogin() }
         )

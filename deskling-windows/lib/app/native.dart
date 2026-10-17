@@ -21,6 +21,14 @@ class Monitor {
   final bool isPrimary;
 }
 
+final _gdi32 = DynamicLibrary.open('gdi32.dll');
+
+final _createRoundRectRgn = _gdi32.lookupFunction<IntPtr Function(Int32, Int32, Int32, Int32, Int32, Int32),
+    int Function(int, int, int, int, int, int)>('CreateRoundRectRgn');
+final _combineRgn =
+    _gdi32.lookupFunction<Int32 Function(IntPtr, IntPtr, IntPtr, Int32), int Function(int, int, int, int)>('CombineRgn');
+
+const _rgnOr = 2;
 const _swpFlags = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER;
 
 /// The few Win32 calls Flutter plugins do not cover. All coordinates are physical pixels.
@@ -50,6 +58,23 @@ class Native {
 
   void setFrame(ScreenRect frame) {
     SetWindowPos(hwnd, 0, frame.left, frame.top, frame.width, frame.height, _swpFlags);
+  }
+
+  /// Limits clicks (and drawing) to these rectangles; the rest of the window lets clicks through.
+  /// Coordinates are relative to the window; each rectangle has its own corner diameter. Null clears the region.
+  void setClickableArea(List<(ScreenRect, int)>? rects) {
+    if (rects == null || rects.isEmpty) {
+      SetWindowRgn(hwnd, NULL, TRUE);
+      return;
+    }
+    final region = CreateRectRgn(0, 0, 0, 0);
+    for (final (rect, corner) in rects) {
+      final part = _createRoundRectRgn(rect.left, rect.top, rect.right + 1, rect.bottom + 1, corner, corner);
+      _combineRgn(region, region, part, _rgnOr);
+      DeleteObject(part);
+    }
+    // The system owns the region after this call, so it is not deleted here.
+    SetWindowRgn(hwnd, region, TRUE);
   }
 
   static Point<int> cursor() {

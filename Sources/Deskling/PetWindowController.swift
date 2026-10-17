@@ -13,6 +13,16 @@ final class PetWindowController {
     let panel: NSPanel
     var onDropped: ((Double, Int?) -> Void)?
     var onInspect: ((NSPoint, NSView) -> Void)?
+    var onClick: (() -> Void)?
+    var onFrameChanged: (() -> Void)?
+    /// A reminder is waiting to be seen.
+    var isAlerting = false {
+        didSet { settle() }
+    }
+    /// A focus session is running.
+    var isFocusing = false {
+        didSet { settle() }
+    }
 
     private let view = PetView()
     private var walk: WalkModel
@@ -80,6 +90,7 @@ final class PetWindowController {
         }
         panel.setFrame(NSRect(origin: panel.frame.origin, size: NSSize(width: height * aspect, height: height)), display: true)
         refresh()
+        onFrameChanged?()
     }
 
     /// The screen under the pet. Falls back to the main screen when its monitor was removed.
@@ -101,13 +112,16 @@ final class PetWindowController {
             fall = falling.hasLanded ? nil : falling
             y = falling.y
             walk.clamp(to: bounds)
-        } else if happyRemaining == 0 {
+        } else if happyRemaining == 0, !isAlerting, !isFocusing {
             walk.step(dt: dt, bounds: bounds)
         } else {
             walk.clamp(to: bounds)
         }
         let origin = NSPoint(x: walk.x, y: y)
-        if origin != panel.frame.origin { panel.setFrameOrigin(origin) }
+        if origin != panel.frame.origin {
+            panel.setFrameOrigin(origin)
+            onFrameChanged?()
+        }
         refresh()
     }
 
@@ -122,11 +136,19 @@ final class PetWindowController {
         happyRemaining = PetPresentation.happyDuration
         walk.stop()
         refresh()
+        onClick?()
+    }
+
+    /// Stops a walk when the pet has something to show, and redraws.
+    private func settle() {
+        if isAlerting || isFocusing { walk.stop() }
+        refresh()
     }
 
     private func dragged(by deltaX: CGFloat) {
         if deltaX != 0 { walk.face(left: deltaX < 0) }
         refresh()
+        onFrameChanged?()
     }
 
     private func drop() {
@@ -139,7 +161,8 @@ final class PetWindowController {
 
     private func refresh() {
         let pose = PetPresentation.pose(isWalking: walk.isWalking, isHappy: happyRemaining > 0,
-                                        isHeld: dragging, isFalling: fall != nil)
+                                        isHeld: dragging, isFalling: fall != nil,
+                                        isAlerting: isAlerting, isFocusing: isFocusing)
         view.show(url: skin.url(for: pose), speed: skin.playbackSpeed(for: pose), facingLeft: walk.facingLeft)
     }
 }

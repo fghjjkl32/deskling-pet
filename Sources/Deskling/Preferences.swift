@@ -17,6 +17,11 @@ final class Preferences {
         set { defaults.set(newValue, forKey: "sizeScale") }
     }
 
+    var stretchEnabled: Bool {
+        get { defaults.bool(forKey: "stretchEnabled") }
+        set { defaults.set(newValue, forKey: "stretchEnabled") }
+    }
+
     var petHidden: Bool {
         get { defaults.bool(forKey: "petHidden") }
         set { defaults.set(newValue, forKey: "petHidden") }

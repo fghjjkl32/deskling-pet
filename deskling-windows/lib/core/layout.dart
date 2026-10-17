@@ -48,27 +48,66 @@ class ScreenRect {
   String toString() => 'ScreenRect($left, $top, $right, $bottom)';
 }
 
-/// Where the pet window goes and where the pet sits inside it.
+/// Where the pet window goes and where the pet and bubble sit inside it.
 class PetLayout {
-  const PetLayout({required this.window, required this.pet});
+  const PetLayout({required this.window, required this.pet, required this.bubble, required this.clickable});
+
+  static const bubbleGap = 6.0;
+  static const screenMargin = 4.0;
 
   /// Physical frame of the window.
   final ScreenRect window;
 
-  /// Logical rectangle inside the window.
+  /// Logical rectangles inside the window.
   final LogicalRect pet;
+  final LogicalRect? bubble;
+
+  /// Physical rectangles relative to the window that take clicks; empty means the whole window.
+  final List<ScreenRect> clickable;
 
   /// `petOrigin` is the pet's physical top-left corner. Sizes are logical; `scale` converts them for this monitor.
   static PetLayout compute({
+    required ScreenRect work,
     required double scale,
     required Point<int> petOrigin,
     required double petWidth,
     required double petHeight,
+    double? bubbleWidth,
+    double? bubbleHeight,
   }) {
     int px(double logical) => (logical * scale).round();
+    final pet = ScreenRect(petOrigin.x, petOrigin.y, petOrigin.x + px(petWidth), petOrigin.y + px(petHeight));
+    if (bubbleWidth == null || bubbleHeight == null) {
+      return PetLayout(
+        window: pet,
+        pet: LogicalRect(0, 0, petWidth, petHeight),
+        bubble: null,
+        clickable: const [],
+      );
+    }
+    // Rounding down could take a pixel from measured text and wrap it onto a line the region then cuts off.
+    final width = (bubbleWidth * scale).ceil();
+    final height = (bubbleHeight * scale).ceil();
+    final margin = px(screenMargin);
+    final centered = pet.left + pet.width ~/ 2 - width ~/ 2;
+    final left = max(work.left + margin, min(centered, work.right - width - margin));
+    final top = max(work.top + margin, pet.top - px(bubbleGap) - height);
+    final bubble = ScreenRect(left, top, left + width, top + height);
+    final window = ScreenRect(
+      min(pet.left, bubble.left),
+      min(pet.top, bubble.top),
+      max(pet.right, bubble.right),
+      max(pet.bottom, bubble.bottom),
+    );
+    ScreenRect local(ScreenRect rect) =>
+        ScreenRect(rect.left - window.left, rect.top - window.top, rect.right - window.left, rect.bottom - window.top);
+    LogicalRect logical(ScreenRect rect) => LogicalRect((rect.left - window.left) / scale,
+        (rect.top - window.top) / scale, rect.width / scale, rect.height / scale);
     return PetLayout(
-      window: ScreenRect(petOrigin.x, petOrigin.y, petOrigin.x + px(petWidth), petOrigin.y + px(petHeight)),
-      pet: LogicalRect(0, 0, petWidth, petHeight),
+      window: window,
+      pet: logical(pet),
+      bubble: logical(bubble),
+      clickable: [local(pet), local(bubble)],
     );
   }
 }

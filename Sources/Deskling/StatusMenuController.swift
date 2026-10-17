@@ -8,6 +8,11 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     struct State {
+        /// The running focus phase and its minutes left, if any.
+        var phase: (Reminders.Phase, Int)?
+        /// Minutes left on the timer, if one is running.
+        var timerMinutesLeft: Int?
+        var stretchEnabled: Bool
         var skins: [SkinItem]
         var selectedSkinPath: String?
         var scale: Double
@@ -17,6 +22,10 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     struct Actions {
+        var toggleFocus: () -> Void
+        var startTimer: (Int) -> Void
+        var cancelTimer: () -> Void
+        var toggleStretch: () -> Void
         var selectSkin: (String?) -> Void
         var openSkinsFolder: () -> Void
         var setScale: (Double) -> Void
@@ -52,6 +61,24 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         let actions = self.actions
         menu.removeAllItems()
 
+        if let (phase, minutes) = current.phase {
+            let label = NSMenuItem(title: text(phase == .focus ? .focusStatus : .breakStatus, minutes), action: nil, keyEquivalent: "")
+            label.isEnabled = false
+            menu.addItem(label)
+        }
+        add(to: menu, text(current.phase == nil ? .startFocus : .stopFocus), actions.toggleFocus)
+        let timerMenu = NSMenu()
+        for minutes in Reminders.timerChoices {
+            add(to: timerMenu, text(.timerMinutes, minutes)) { actions.startTimer(minutes) }
+        }
+        if let left = current.timerMinutesLeft {
+            timerMenu.addItem(.separator())
+            add(to: timerMenu, text(.cancelTimer, left), actions.cancelTimer)
+        }
+        addSubmenu(to: menu, text(.timer), timerMenu)
+        add(to: menu, text(.stretchReminder), checked: current.stretchEnabled, actions.toggleStretch)
+        menu.addItem(.separator())
+
         let skinMenu = NSMenu()
         for skin in current.skins {
             add(to: skinMenu, skin.name, checked: skin.path == current.selectedSkinPath) { actions.selectSkin(skin.path) }
@@ -82,6 +109,8 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     private func text(_ text: Text) -> String { text.string(language) }
+
+    private func text(_ text: Text, _ number: Int) -> String { text.string(language, number) }
 
     private func add(to menu: NSMenu, _ title: String, checked: Bool = false, _ handler: @escaping () -> Void) {
         let item = NSMenuItem(title: title, action: #selector(run(_:)), keyEquivalent: "")

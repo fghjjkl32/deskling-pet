@@ -2,7 +2,7 @@ import Foundation
 import ImageIO
 
 public enum PetPose: String, CaseIterable {
-    case idle, walk, happy, drag, fall
+    case idle, walk, happy, working, waiting, drag, fall
 
     /// Poses to try, in order, when a skin has no image for this one. `idle` is always the last resort.
     var fallbacks: [PetPose] {
