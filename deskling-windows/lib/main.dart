@@ -50,7 +50,7 @@ Future<void> main() async {
   runApp(
     Directionality(
       textDirection: TextDirection.ltr,
-      child: PetView(controller: app.pet, sprites: app.sprites, onBubbleClick: app.clearAlert),
+      child: PetView(controller: app.pet, sprites: app.sprites, onBubbleClick: app.bubbleClicked),
     ),
   );
 }

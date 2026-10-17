@@ -60,7 +60,9 @@ xattr -dr com.apple.quarantine "/Applications/Deskling Pet.app"
 
 ## 스킨 바꾸기
 
-메뉴에서 **스킨 > 스킨 폴더 열기**를 고르고, 폴더를 하나 만들어 그림을 넣습니다. macOS에서는 `~/Library/Application Support/Deskling Pet/skins/`이고 Windows에서는 `%APPDATA%\Deskling Pet\skins\`입니다. 같은 스킨 폴더를 두 운영체제에서 그대로 쓸 수 있습니다.
+앱에는 캐릭터 두 개가 들어 있습니다. 기본은 **남자아이**이고, **여자아이**도 **스킨** 메뉴에서 고를 수 있습니다.
+
+직접 만들려면 메뉴에서 **스킨 > 스킨 폴더 열기**를 고르고, 폴더를 하나 만들어 그림을 넣습니다. macOS에서는 `~/Library/Application Support/Deskling Pet/skins/`이고 Windows에서는 `%APPDATA%\Deskling Pet\skins\`입니다. 같은 스킨 폴더를 두 운영체제에서 그대로 쓸 수 있습니다.
 
 ```
 skins/my-pet/
@@ -82,7 +84,7 @@ skins/my-pet/
 
 Deskling 스킨도 그대로 쓸 수 있습니다. `done` 그림의 이름만 `happy`로 바꾸면 됩니다.
 
-그다음 **스킨** 메뉴에서 고릅니다. 공유할 권리가 있는 그림만 공유해야 합니다.
+정지 그림 한 장으로 기본 캐릭터처럼 움직이는 스킨을 만들려면 `python3 scripts/make-skin.py drawing.png skins/my-pet "My Pet"`을 실행합니다(Pillow가 필요합니다). 그다음 **스킨** 메뉴에서 고릅니다. 공유할 권리가 있는 그림만 공유해야 합니다.
 
 ## 삭제하기
 
@@ -109,4 +111,4 @@ flutter build windows --release
 
 ## 라이선스
 
-코드는 [MIT 라이선스](LICENSE)로 공개합니다. 기본 펫은 shuaa(megupets.com)가 CC0으로 공개한 고양이입니다. 자세한 내용은 [CREDITS.md](CREDITS.md)에 있습니다.
+코드는 [MIT 라이선스](LICENSE)로 공개합니다. 기본 캐릭터는 프로젝트 작성자가 직접 그렸습니다. 자세한 내용은 [CREDITS.md](CREDITS.md)에 있습니다.

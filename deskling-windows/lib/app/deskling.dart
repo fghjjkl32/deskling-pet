@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 
+import '../core/bubble_guard.dart';
 import '../core/paths.dart';
 import '../core/reminders.dart';
 import '../core/skin.dart';
@@ -28,9 +29,16 @@ class Deskling {
 
   /// The reminder the pet is showing until it or its bubble is clicked.
   Reminder? _alert;
+  final _bubbleGuard = BubbleGuard();
 
-  late final String _defaultSkinDirectory = p.join(
-      p.dirname(Platform.resolvedExecutable), 'data', 'flutter_assets', 'assets', 'skins', 'default');
+  late final String _bundledSkinsDirectory =
+      p.join(p.dirname(Platform.resolvedExecutable), 'data', 'flutter_assets', 'assets', 'skins');
+
+  /// The default pet, stored as a null skin path.
+  late final String _defaultSkinDirectory = p.join(_bundledSkinsDirectory, 'boy');
+
+  /// The other bundled pet, stored by its absolute path like a user skin.
+  late final String _girlSkinDirectory = p.join(_bundledSkinsDirectory, 'girl');
 
   late final PetController pet;
   late final Tray tray;
@@ -82,12 +90,18 @@ class Deskling {
     _refreshPet();
   }
 
+  void bubbleClicked() {
+    if (_bubbleGuard.acceptsClick(DateTime.now())) clearAlert();
+  }
+
   /// An alert shows `waiting` and its bubble; a focus phase without one shows `working`. A hidden pet shows no bubble.
   void _refreshPet() {
     final alert = _alert;
     pet.alerting = alert != null;
     pet.focusing = alert == null && reminders.phase == FocusPhase.focus;
-    pet.bubbleText = alert == null || preferences.petHidden ? null : PetPresentation.message(alert, language);
+    final text = alert == null || preferences.petHidden ? null : PetPresentation.message(alert, language);
+    _bubbleGuard.update(text, DateTime.now());
+    pet.bubbleText = text;
   }
 
   // Skins
@@ -112,7 +126,12 @@ class Deskling {
 
   TrayState _trayState() {
     final userSkins = SkinLoader.list(paths.skinsDirectory).map((skin) => SkinItem(skin.directory, skin.name)).toList();
-    final selected = userSkins.any((skin) => skin.path == preferences.skinPath) ? preferences.skinPath : null;
+    final skins = [
+      SkinItem(null, _t(Txt.boySkin)),
+      SkinItem(_girlSkinDirectory, _t(Txt.girlSkin)),
+      ...userSkins,
+    ];
+    final selected = skins.any((skin) => skin.path == preferences.skinPath) ? preferences.skinPath : null;
     bool launchAtLogin;
     try {
       launchAtLogin = LoginItem.isEnabled;
@@ -127,7 +146,7 @@ class Deskling {
       phaseMinutesLeft: phaseEnds == null ? 0 : Reminders.minutesLeft(phaseEnds, now),
       timerMinutesLeft: timerEnds == null ? null : Reminders.minutesLeft(timerEnds, now),
       stretchEnabled: reminders.stretchEnabled,
-      skins: [SkinItem(null, _t(Txt.defaultSkin)), ...userSkins],
+      skins: skins,
       selectedSkinPath: selected,
       sizeScale: preferences.sizeScale,
       petHidden: preferences.petHidden,

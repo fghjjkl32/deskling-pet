@@ -99,10 +99,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Menu
 
     private func menuState() -> StatusMenuController.State {
+        // The default skin is stored as no choice at all, so it survives the app moving.
+        let bundled = Resources.bundledSkins.enumerated().map { index, skin in
+            StatusMenuController.SkinItem(path: index == 0 ? nil : Resources.bundledSkinDirectory(skin.id).path, name: text(skin.name))
+        }
         let userSkins = SkinLoader.list(in: AppPaths.skinsDirectory()).map {
             StatusMenuController.SkinItem(path: $0.directory.path, name: $0.name)
         }
-        let selected = userSkins.contains { $0.path == preferences.skinPath } ? preferences.skinPath : nil
+        let skins = bundled + userSkins
+        let selected = skins.contains { $0.path == preferences.skinPath } ? preferences.skinPath : nil
         let now = Date()
         return StatusMenuController.State(
             phase: reminders.phase.flatMap { phase in
@@ -110,7 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             timerMinutesLeft: reminders.timerEnds.map { Reminders.minutesLeft(until: $0, at: now) },
             stretchEnabled: reminders.stretchEnabled,
-            skins: [StatusMenuController.SkinItem(path: nil, name: text(.defaultSkin))] + userSkins,
+            skins: skins,
             selectedSkinPath: selected,
             scale: preferences.sizeScale,
             petHidden: preferences.petHidden,

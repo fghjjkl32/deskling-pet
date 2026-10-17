@@ -60,7 +60,9 @@ When a reminder is due, the pet stops and shows a speech bubble. Click the bubbl
 
 ## Custom skins
 
-Choose **Skin > Open Skins Folder** from the menu, create a folder, and put your images in it. The folder is `~/Library/Application Support/Deskling Pet/skins/` on macOS and `%APPDATA%\Deskling Pet\skins\` on Windows; the same skin folder works on both.
+Two characters come with the app: **Boy**, the default, and **Girl**. Pick one from the **Skin** menu.
+
+To make your own, choose **Skin > Open Skins Folder** from the menu, create a folder, and put your images in it. The folder is `~/Library/Application Support/Deskling Pet/skins/` on macOS and `%APPDATA%\Deskling Pet\skins\` on Windows; the same skin folder works on both.
 
 ```
 skins/my-pet/
@@ -82,7 +84,7 @@ skins/my-pet/
 
 A Deskling skin works as is; only rename its `done` image to `happy`.
 
-Then pick your skin from the **Skin** menu. Only share images you have the right to share.
+To animate a single still drawing the way the bundled characters are animated, run `python3 scripts/make-skin.py drawing.png skins/my-pet "My Pet"` (requires Pillow). Then pick your skin from the **Skin** menu. Only share images you have the right to share.
 
 ## Uninstall
 
@@ -109,4 +111,4 @@ flutter build windows --release
 
 ## License
 
-Code is released under the [MIT License](LICENSE). The default pet is a CC0 cat by shuaa (megupets.com); see [CREDITS.md](CREDITS.md).
+Code is released under the [MIT License](LICENSE). The bundled characters were drawn by the project author; see [CREDITS.md](CREDITS.md).

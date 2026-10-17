@@ -1,3 +1,4 @@
+import DesklingCore
 import Foundation
 
 enum Resources {
@@ -9,7 +10,13 @@ enum Resources {
         return Bundle.main.resourceURL ?? Bundle.main.bundleURL
     }
 
-    static var defaultSkinDirectory: URL {
-        root.appendingPathComponent("skins/default", isDirectory: true)
+    /// The skin used when none is chosen, or when the chosen one cannot be loaded.
+    static var defaultSkinDirectory: URL { bundledSkinDirectory("boy") }
+
+    /// The skins that ship with the app, in menu order: the first one is the default.
+    static let bundledSkins: [(id: String, name: Text)] = [("boy", .boySkin), ("girl", .girlSkin)]
+
+    static func bundledSkinDirectory(_ id: String) -> URL {
+        root.appendingPathComponent("skins/\(id)", isDirectory: true)
     }
 }

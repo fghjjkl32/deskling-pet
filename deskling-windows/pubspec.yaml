@@ -26,4 +26,5 @@ dev_dependencies:
 flutter:
   assets:
     - assets/tray.ico
-    - assets/skins/default/
+    - assets/skins/boy/
+    - assets/skins/girl/

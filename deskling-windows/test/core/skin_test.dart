@@ -185,17 +185,20 @@ void main() {
     expect(SkinLoader.list(p.join(root.path, 'missing')), isEmpty);
   });
 
-  test('the bundled default skin loads with its animations', () {
-    final skin = SkinLoader.load(p.join('assets', 'skins', 'default'))!;
-    expect(skin.name, 'Deskling Pet');
-    // The default skin ships no `drag` or `fall` image; both borrow its walk cycle.
-    for (final pose in [PetPose.idle, PetPose.walk, PetPose.happy, PetPose.working, PetPose.waiting]) {
-      expect(p.basename(skin.pathFor(pose)), '${pose.name}.png');
-      expect(SpriteFrames.load(skin.pathFor(pose)), isNotNull, reason: pose.name);
+  test('the bundled boy and girl skins load with their animations', () {
+    for (final (id, name) in [('boy', 'Boy'), ('girl', 'Girl')]) {
+      final skin = SkinLoader.load(p.join('assets', 'skins', id))!;
+      expect(skin.name, name);
+      expect(skin.height, 130);
+      // The bundled skins ship no `fall` image; it borrows the drag image.
+      for (final pose in [PetPose.idle, PetPose.walk, PetPose.happy, PetPose.working, PetPose.waiting, PetPose.drag]) {
+        expect(p.basename(skin.pathFor(pose)), '${pose.name}.png', reason: '$id ${pose.name}');
+        expect(SpriteFrames.load(skin.pathFor(pose)), isNotNull, reason: '$id ${pose.name}');
+      }
+      expect(p.basename(skin.pathFor(PetPose.fall)), 'drag.png', reason: id);
+      expect(SpriteFrames.load(skin.pathFor(PetPose.idle))?.pixels.length, 16, reason: id);
+      expect(SpriteFrames.load(skin.pathFor(PetPose.walk))?.pixels.length, 8, reason: id);
+      expect(SpriteFrames.load(skin.pathFor(PetPose.happy))?.pixels.length, 16, reason: id);
     }
-    expect(p.basename(skin.pathFor(PetPose.drag)), 'walk.png');
-    expect(SpriteFrames.load(skin.pathFor(PetPose.idle))?.pixels.length, 2);
-    expect(SpriteFrames.load(skin.pathFor(PetPose.walk))?.pixels.length, 19);
-    expect(SpriteFrames.load(skin.pathFor(PetPose.happy))?.pixels.length, 10);
   });
 }

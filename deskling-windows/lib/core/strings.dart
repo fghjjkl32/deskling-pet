@@ -12,7 +12,8 @@ enum Language {
 
 enum Txt {
   skin('스킨', 'Skin'),
-  defaultSkin('기본 펫', 'Default pet'),
+  boySkin('남자아이', 'Boy'),
+  girlSkin('여자아이', 'Girl'),
   openSkinsFolder('스킨 폴더 열기', 'Open Skins Folder'),
   size('크기', 'Size'),
   sizeSmall('작게', 'Small'),

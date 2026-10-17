@@ -8,7 +8,7 @@ import '../core/strings.dart';
 class SkinItem {
   const SkinItem(this.path, this.name);
 
-  /// Null for the bundled default pet.
+  /// Null for the bundled default pet, the boy.
   final String? path;
   final String name;
 }

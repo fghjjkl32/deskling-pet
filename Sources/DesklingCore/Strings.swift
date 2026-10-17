@@ -9,7 +9,7 @@ public enum Language: Equatable {
 }
 
 public enum Text: CaseIterable {
-    case skin, defaultSkin, openSkinsFolder
+    case skin, boySkin, girlSkin, openSkinsFolder
     case size, sizeSmall, sizeMedium, sizeLarge
     case hidePet, showPet, launchAtLogin, quit
     case startFocus, stopFocus, focusStatus, breakStatus
@@ -29,7 +29,8 @@ public enum Text: CaseIterable {
 
     private static let table: [Text: (String, String)] = [
         .skin: ("스킨", "Skin"),
-        .defaultSkin: ("기본 펫", "Default pet"),
+        .boySkin: ("남자아이", "Boy"),
+        .girlSkin: ("여자아이", "Girl"),
         .openSkinsFolder: ("스킨 폴더 열기", "Open Skins Folder"),
         .size: ("크기", "Size"),
         .sizeSmall: ("작게", "Small"),

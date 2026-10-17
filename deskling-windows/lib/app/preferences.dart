@@ -8,7 +8,7 @@ class Preferences {
 
   final SharedPreferences _store;
 
-  /// Null means the bundled default pet.
+  /// Null means the bundled default pet, the boy.
   String? get skinPath => _store.getString('skinPath');
   set skinPath(String? value) => value == null ? _store.remove('skinPath') : _store.setString('skinPath', value);
 
