@@ -1,0 +1,52 @@
+name: Windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths: ["deskling-windows/**"]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: deskling-windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.7
+          channel: stable
+      - run: flutter pub get
+      - run: dart analyze --fatal-infos
+      - run: flutter test
+      - name: Build and zip
+        shell: pwsh
+        run: |
+          $version = "${{ inputs.version }}".TrimStart('v')
+          if (-not $version) { $version = "0.0.0-preview" }
+          $buildName = $version -replace '-.*$', ''
+          flutter build windows --release --build-name $buildName
+          $release = "build/windows/x64/runner/Release"
+          New-Item -ItemType Directory -Force -Path dist/DesklingPet | Out-Null
+          Copy-Item -Recurse -Force "$release/*" dist/DesklingPet
+          # Flutter's Windows deployment guide: ship the Visual C++ runtime next to the app.
+          foreach ($dll in "msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll") {
+            Copy-Item "$env:WINDIR\System32\$dll" dist/DesklingPet
+          }
+          Compress-Archive -Path dist/DesklingPet -DestinationPath "dist/DesklingPet-windows-$version.zip" -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deskling-pet-windows
+          path: deskling-windows/dist/*.zip
+          if-no-files-found: error
