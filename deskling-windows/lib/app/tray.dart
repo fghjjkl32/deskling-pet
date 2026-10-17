@@ -46,6 +46,7 @@ class TrayActions {
     required this.startFocus,
     required this.stopFocus,
     required this.startTimer,
+    required this.customTimer,
     required this.cancelTimer,
     required this.toggleStretch,
     required this.selectSkin,
@@ -59,6 +60,7 @@ class TrayActions {
   final void Function() startFocus;
   final void Function() stopFocus;
   final void Function(int minutes) startTimer;
+  final void Function() customTimer;
   final void Function() cancelTimer;
   final void Function() toggleStretch;
   final void Function(String? path) selectSkin;
@@ -119,6 +121,7 @@ class Tray with TrayListener {
           submenu: Menu(items: [
             for (final minutes in Reminders.timerChoices)
               MenuItem(label: Txt.timerMinutes.withNumber(language, minutes), onClick: (_) => actions.startTimer(minutes)),
+            MenuItem(label: _t(Txt.customTimer), onClick: (_) => actions.customTimer()),
             if (s.timerMinutesLeft case final left?) ...[
               MenuItem.separator(),
               MenuItem(label: Txt.cancelTimer.withNumber(language, left), onClick: (_) => actions.cancelTimer()),

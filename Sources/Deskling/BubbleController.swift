@@ -30,9 +30,9 @@ final class BubbleController {
     private let container = BubbleView()
     private let label = NSTextField(wrappingLabelWithString: "")
     private var shownText: String?
-    private var dismissedText: String?
-    /// Called after a click hides the bubble.
-    var onDismiss: (() -> Void)?
+    private var shownKey: String?
+    /// Called with the bubble's key after a click hides it.
+    var onDismiss: ((String) -> Void)?
 
     init() {
         panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -46,55 +46,35 @@ final class BubbleController {
         container.wantsLayer = true
         container.layer?.cornerRadius = 10
         container.layer?.borderWidth = 1
-        label.font = .systemFont(ofSize: 14)
+        label.font = .monospacedDigitSystemFont(ofSize: 14, weight: .regular)
         label.textColor = .labelColor
         label.isSelectable = false
         container.addSubview(label)
         panel.contentView = container
         container.onClick = { [weak self] in
-            self?.dismissedText = self?.shownText
-            self?.panel.orderOut(nil)
-            self?.onDismiss?()
+            guard let self, let key = self.shownKey else { return }
+            self.panel.orderOut(nil)
+            self.onDismiss?(key)
         }
     }
 
-    /// The first of several lines is the heading; lines between it and the last one are details.
-    private static func styled(_ text: String) -> NSAttributedString {
-        let lines = text.components(separatedBy: "\n")
-        let result = NSMutableAttributedString()
-        for (index, line) in lines.enumerated() {
-            var attributes: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 14), .foregroundColor: NSColor.labelColor]
-            if lines.count > 1, index == 0 {
-                attributes[.font] = NSFont.systemFont(ofSize: 14, weight: .semibold)
-            } else if index < lines.count - 1 {
-                attributes[.foregroundColor] = NSColor.secondaryLabelColor
-            }
-            result.append(NSAttributedString(string: index == 0 ? line : "\n" + line, attributes: attributes))
-        }
-        return result
-    }
-
-    /// Forgets a click dismissal so the next identical text is shown again.
-    func clearDismissal() {
-        dismissedText = nil
-    }
-
-    /// Shows `text` above `anchor`. Passing `nil` hides the bubble and forgets a dismissal.
-    func update(text: String?, anchor: NSRect) {
+    /// Shows `text` above `anchor`. Passing `nil` hides the bubble.
+    /// `key` names the kind of bubble: a new key, or a bubble that was hidden, ignores clicks for a moment,
+    /// while a countdown that only changes its text keeps taking clicks.
+    func update(text: String?, key: String, anchor: NSRect) {
         guard let text else {
-            dismissedText = nil
             shownText = nil
+            shownKey = nil
             panel.orderOut(nil)
             return
         }
-        if text == dismissedText { return }
-        dismissedText = nil
-        if text != shownText || !panel.isVisible {
+        if key != shownKey || !panel.isVisible {
             container.ignoreClicksUntil = Date().addingTimeInterval(Self.clickGuard)
         }
+        shownKey = key
         if text != shownText {
             shownText = text
-            label.attributedStringValue = Self.styled(text)
+            label.stringValue = text
         }
         let textSize = label.cell?.cellSize(forBounds: NSRect(x: 0, y: 0, width: Self.maxTextWidth, height: 10_000))
             ?? NSSize(width: Self.maxTextWidth, height: 20)

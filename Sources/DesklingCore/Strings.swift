@@ -14,6 +14,8 @@ public enum Text: CaseIterable {
     case hidePet, showPet, launchAtLogin, quit
     case startFocus, stopFocus, focusStatus, breakStatus
     case timer, timerMinutes, cancelTimer, stretchReminder
+    case customTimer, customTimerTitle, customTimerBody, start, cancel, invalidDuration
+    case countdownFocus, countdownBreak
     case focusEndedMessage, breakEndedMessage, stretchMessage, timerEndedMessage
     case close, loginItemFailed, missingResources
 
@@ -48,6 +50,17 @@ public enum Text: CaseIterable {
         .timerMinutes: ("%d분", "%d min"),
         .cancelTimer: ("타이머 취소하기 (%d분 남음)", "Cancel Timer (%d min left)"),
         .stretchReminder: ("한 시간마다 스트레칭 알림", "Stretch Reminder Every Hour"),
+        .customTimer: ("직접 입력하기…", "Custom…"),
+        .customTimerTitle: ("타이머 시간", "Timer Length"),
+        .customTimerBody: (
+            "몇 분 뒤에 알려 드릴지 입력합니다. 25처럼 분으로 쓰거나, 1:30처럼 시간과 분으로 씁니다.",
+            "Enter how long to wait: minutes such as 25, or hours and minutes such as 1:30."
+        ),
+        .start: ("시작하기", "Start"),
+        .cancel: ("취소", "Cancel"),
+        .invalidDuration: ("1분에서 24시간 사이로 입력해야 합니다.", "Enter a length between 1 minute and 24 hours."),
+        .countdownFocus: ("집중", "Focus"),
+        .countdownBreak: ("휴식", "Break"),
         .focusEndedMessage: ("집중 시간이 끝났습니다. 이제 5분 동안 쉬는 시간입니다.", "Focus time is over. Take a 5-minute break."),
         .breakEndedMessage: ("쉬는 시간이 끝났습니다.", "Your break is over."),
         .stretchMessage: ("잠깐 일어나서 몸을 풀고 물을 마실 시간입니다.", "Stand up, stretch, and drink some water."),
@@ -72,6 +85,30 @@ public enum PetPresentation {
         if isAlerting { return .waiting }
         if isFocusing { return .working }
         return isWalking ? .walk : .idle
+    }
+
+    /// What the speech bubble shows: a due reminder, or else the time left on the focus session and the timer,
+    /// one per line. `key` stays the same while the same kind of bubble counts down, so a click on it can be
+    /// told apart from a click on a new bubble. Returns `nil` when there is nothing to show.
+    public static func bubble(
+        alert: Reminder?, reminders: Reminders, showCountdown: Bool, now: Date, language: Language
+    ) -> (key: String, text: String)? {
+        if let alert {
+            return ("alert-\(alert)", message(for: alert, language: language))
+        }
+        guard showCountdown else { return nil }
+        var lines: [String] = []
+        var key = "countdown"
+        if let phase = reminders.phase, let ends = reminders.phaseEnds {
+            let label = phase == .focus ? Text.countdownFocus : .countdownBreak
+            lines.append("\(label.string(language)) \(Reminders.clock(until: ends, at: now))")
+            key += "-\(phase)"
+        }
+        if let ends = reminders.timerEnds {
+            lines.append("\(Text.timer.string(language)) \(Reminders.clock(until: ends, at: now))")
+            key += "-timer"
+        }
+        return lines.isEmpty ? nil : (key, lines.joined(separator: "\n"))
     }
 
     public static func message(for reminder: Reminder, language: Language) -> String {

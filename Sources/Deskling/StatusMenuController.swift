@@ -24,6 +24,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     struct Actions {
         var toggleFocus: () -> Void
         var startTimer: (Int) -> Void
+        var customTimer: () -> Void
         var cancelTimer: () -> Void
         var toggleStretch: () -> Void
         var selectSkin: (String?) -> Void
@@ -71,6 +72,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         for minutes in Reminders.timerChoices {
             add(to: timerMenu, text(.timerMinutes, minutes)) { actions.startTimer(minutes) }
         }
+        add(to: timerMenu, text(.customTimer), actions.customTimer)
         if let left = current.timerMinutesLeft {
             timerMenu.addItem(.separator())
             add(to: timerMenu, text(.cancelTimer, left), actions.cancelTimer)

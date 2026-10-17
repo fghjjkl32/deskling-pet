@@ -185,20 +185,29 @@ void main() {
     expect(SkinLoader.list(p.join(root.path, 'missing')), isEmpty);
   });
 
-  test('the bundled boy and girl skins load with their animations', () {
-    for (final (id, name) in [('boy', 'Boy'), ('girl', 'Girl')]) {
+  test('the bundled skins load with their animations', () {
+    const bundled = {
+      'boy': (name: 'Boy', height: 118.0, poses: PetPose.values, frames: [6, 8, 6]),
+      'girl': (
+        name: 'Girl',
+        height: 130.0,
+        poses: [PetPose.idle, PetPose.walk, PetPose.happy, PetPose.working, PetPose.waiting, PetPose.drag],
+        frames: [16, 8, 16],
+      ),
+    };
+    for (final MapEntry(key: id, value: expected) in bundled.entries) {
       final skin = SkinLoader.load(p.join('assets', 'skins', id))!;
-      expect(skin.name, name);
-      expect(skin.height, 130);
-      // The bundled skins ship no `fall` image; it borrows the drag image.
-      for (final pose in [PetPose.idle, PetPose.walk, PetPose.happy, PetPose.working, PetPose.waiting, PetPose.drag]) {
+      expect(skin.name, expected.name);
+      expect(skin.height, expected.height);
+      for (final pose in expected.poses) {
         expect(p.basename(skin.pathFor(pose)), '${pose.name}.png', reason: '$id ${pose.name}');
         expect(SpriteFrames.load(skin.pathFor(pose)), isNotNull, reason: '$id ${pose.name}');
       }
-      expect(p.basename(skin.pathFor(PetPose.fall)), 'drag.png', reason: id);
-      expect(SpriteFrames.load(skin.pathFor(PetPose.idle))?.pixels.length, 16, reason: id);
-      expect(SpriteFrames.load(skin.pathFor(PetPose.walk))?.pixels.length, 8, reason: id);
-      expect(SpriteFrames.load(skin.pathFor(PetPose.happy))?.pixels.length, 16, reason: id);
+      if (!expected.poses.contains(PetPose.fall)) expect(p.basename(skin.pathFor(PetPose.fall)), 'drag.png', reason: id);
+      final counts = [PetPose.idle, PetPose.walk, PetPose.happy]
+          .map((pose) => SpriteFrames.load(skin.pathFor(pose))?.pixels.length)
+          .toList();
+      expect(counts, expected.frames, reason: id);
     }
   });
 }

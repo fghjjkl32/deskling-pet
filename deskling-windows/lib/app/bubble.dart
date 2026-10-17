@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
-/// The speech bubble that shows a reminder above the pet.
+/// The speech bubble above the pet: a reminder, or the countdown of the focus session and the timer.
 class Bubble {
   static const fontSize = 14.0;
   static const maxTextWidth = 260.0;
@@ -16,7 +16,13 @@ class Bubble {
 
   static TextSpan span(String text) => TextSpan(
         text: text,
-        style: TextStyle(fontSize: fontSize, height: 1.3, color: (_isDark ? _dark : _light).text),
+        style: TextStyle(
+          fontSize: fontSize,
+          height: 1.3,
+          color: (_isDark ? _dark : _light).text,
+          // Fixed-width digits keep the countdown from jittering as it ticks.
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
       );
 
   /// The bubble's logical size, padding included.

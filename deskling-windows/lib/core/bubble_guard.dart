@@ -1,16 +1,19 @@
-/// Ignores clicks that arrive just after the bubble appears or changes, so one already on its way
-/// cannot dismiss a bubble nobody has seen.
+/// Ignores clicks that arrive just after a new bubble appears, so one already on its way
+/// cannot dismiss a bubble nobody has seen. A countdown that only changes its text keeps taking clicks.
 class BubbleGuard {
   static const clickGuard = Duration(milliseconds: 500);
 
-  String? _shown;
+  String? _shownKey;
   DateTime _ignoreClicksUntil = DateTime.fromMillisecondsSinceEpoch(0);
 
-  /// Called with the text on screen, or null when the bubble is hidden.
-  void update(String? text, DateTime now) {
-    if (text != null && text != _shown) _ignoreClicksUntil = now.add(clickGuard);
-    _shown = text;
+  /// The kind of bubble on screen, or null when it is hidden.
+  String? get shownKey => _shownKey;
+
+  /// Called with the key of the bubble on screen, or null when the bubble is hidden.
+  void update(String? key, DateTime now) {
+    if (key != null && key != _shownKey) _ignoreClicksUntil = now.add(clickGuard);
+    _shownKey = key;
   }
 
-  bool acceptsClick(DateTime now) => _shown != null && !now.isBefore(_ignoreClicksUntil);
+  bool acceptsClick(DateTime now) => _shownKey != null && !now.isBefore(_ignoreClicksUntil);
 }

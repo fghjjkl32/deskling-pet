@@ -88,3 +88,48 @@ final class RemindersTests: XCTestCase {
         XCTAssertEqual(Reminders.minutesLeft(until: start, at: at(minutes: 1)), 1)
     }
 }
+
+final class TimerInputTests: XCTestCase {
+    func testParseMinutes() {
+        XCTAssertEqual(Reminders.parseMinutes("25"), 25)
+        XCTAssertEqual(Reminders.parseMinutes(" 90 "), 90)
+        XCTAssertEqual(Reminders.parseMinutes("1:30"), 90)
+        XCTAssertEqual(Reminders.parseMinutes("0:05"), 5)
+        XCTAssertEqual(Reminders.parseMinutes("1h 30m"), 90)
+        XCTAssertEqual(Reminders.parseMinutes("2h"), 120)
+        XCTAssertEqual(Reminders.parseMinutes("45 min"), 45)
+        XCTAssertEqual(Reminders.parseMinutes("1시간 30분"), 90)
+        XCTAssertEqual(Reminders.parseMinutes("45분"), 45)
+        XCTAssertEqual(Reminders.parseMinutes("24:00"), 24 * 60)
+    }
+
+    func testRejectsBadLengths() {
+        for text in ["", "0", "-5", "abc", "1:60", "24:01", "1441", "1.5", "분", "30 seconds", "1:"] {
+            XCTAssertNil(Reminders.parseMinutes(text), text)
+        }
+    }
+
+    func testClock() {
+        let now = Date(timeIntervalSince1970: 0)
+        XCTAssertEqual(Reminders.clock(until: now.addingTimeInterval(245), at: now), "4:05")
+        XCTAssertEqual(Reminders.clock(until: now.addingTimeInterval(244.2), at: now), "4:05")
+        XCTAssertEqual(Reminders.clock(until: now.addingTimeInterval(3723), at: now), "1:02:03")
+        XCTAssertEqual(Reminders.clock(until: now, at: now.addingTimeInterval(5)), "0:00")
+    }
+
+    func testBubbleShowsAlertBeforeCountdown() {
+        let now = Date(timeIntervalSince1970: 0)
+        var reminders = Reminders()
+        XCTAssertNil(PetPresentation.bubble(alert: nil, reminders: reminders, showCountdown: true, now: now, language: .korean))
+        reminders.startFocus(at: now)
+        reminders.startTimer(minutes: 5, at: now)
+        let countdown = PetPresentation.bubble(alert: nil, reminders: reminders, showCountdown: true, now: now, language: .korean)
+        XCTAssertEqual(countdown?.text, "집중 25:00\n타이머 5:00")
+        let later = PetPresentation.bubble(alert: nil, reminders: reminders, showCountdown: true, now: now.addingTimeInterval(1), language: .korean)
+        XCTAssertEqual(later?.key, countdown?.key)
+        XCTAssertNil(PetPresentation.bubble(alert: nil, reminders: reminders, showCountdown: false, now: now, language: .korean))
+        let alert = PetPresentation.bubble(alert: .timerEnded, reminders: reminders, showCountdown: false, now: now, language: .english)
+        XCTAssertEqual(alert?.text, "Your timer is up.")
+        XCTAssertNotEqual(alert?.key, countdown?.key)
+    }
+}

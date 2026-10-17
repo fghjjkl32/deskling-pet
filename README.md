@@ -53,8 +53,10 @@ Open the menu from the paw icon or by double-clicking the pet.
 | Menu item | What happens |
 |---|---|
 | **Start Focus (25 min)** | The pet sits down and works. After 25 minutes it tells you to take a break, and after 5 more minutes it tells you the break is over. **Stop Focus** ends the session early. The menu shows the minutes left. |
-| **Timer** | Pick 5, 10, 15, 30 or 60 minutes. The pet tells you when the time is up. **Cancel Timer** stops it. |
+| **Timer** | Pick 5, 10, 15, 30 or 60 minutes, or choose **Custom…** and type any length up to 24 hours: `25` for minutes, `1:30` for hours and minutes, or `1h 30m`. The pet tells you when the time is up. **Cancel Timer** stops it. |
 | **Stretch Reminder Every Hour** | Every hour, the pet reminds you to stand up, stretch and drink some water. It stays quiet during a focus session and its break, and counts the next hour from the end of the break. The setting is kept after a restart. |
+
+While a focus session or a timer runs, a speech bubble above the pet counts down the time left. Click it to hide the countdown until the next session or timer starts.
 
 When a reminder is due, the pet stops and shows a speech bubble. Click the bubble or the pet to dismiss it. While the pet is hidden, reminders still run but no bubble appears.
 
@@ -84,7 +86,11 @@ skins/my-pet/
 
 A Deskling skin works as is; only rename its `done` image to `happy`.
 
-To animate a single still drawing the way the bundled characters are animated, run `python3 scripts/make-skin.py drawing.png skins/my-pet "My Pet"` (requires Pillow). Then pick your skin from the **Skin** menu. Only share images you have the right to share.
+Two scripts turn drawings into a skin (both need Python with Pillow; the first also needs numpy and scipy):
+
+- `scripts/sheet-to-skin.py art/boy skins/my-pet "My Pet"` takes a folder with `original.png` and one sprite sheet per pose (`idle.png`, `walk.png`, ...), each a single row of frames on a white or transparent background. It removes the background, cuts the frames, and matches their size to the original drawing. The Boy was made this way.
+- `scripts/make-skin.py drawing.png skins/my-pet "My Pet"` animates one still drawing by moving and tilting it. The Girl was made this way.
+ Then pick your skin from the **Skin** menu. Only share images you have the right to share.
 
 ## Uninstall
 

@@ -80,6 +80,57 @@ public struct Reminders {
         return due
     }
 
+    /// The longest timer that can be typed in, in minutes.
+    public static let maxTimerMinutes = 24 * 60
+
+    /// Reads a timer length typed by the user: minutes ("25"), hours and minutes ("1:30"),
+    /// or with units ("1h 30m", "1시간 30분", "45분"). Returns minutes, or `nil` when the text
+    /// is not a length between one minute and 24 hours.
+    public static func parseMinutes(_ text: String) -> Int? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        var minutes: Int?
+        if let number = Int(trimmed) {
+            minutes = number
+        } else if let colon = trimmed.firstIndex(of: ":") {
+            if let hours = Int(trimmed[..<colon]), let rest = Int(trimmed[trimmed.index(after: colon)...]), (0..<60).contains(rest) {
+                minutes = hours * 60 + rest
+            }
+        } else {
+            minutes = minutesWithUnits(trimmed)
+        }
+        guard let minutes, (1...maxTimerMinutes).contains(minutes) else { return nil }
+        return minutes
+    }
+
+    private static func minutesWithUnits(_ text: String) -> Int? {
+        let units: [(names: [String], minutes: Int)] = [(["시간", "hours", "hour", "hrs", "hr", "h"], 60), (["분", "minutes", "minute", "mins", "min", "m"], 1)]
+        var total = 0
+        var rest = Substring(text)
+        var matched = false
+        while !rest.isEmpty {
+            rest = rest.drop { $0 == " " }
+            let digits = rest.prefix { $0.isASCII && $0.isNumber }
+            guard let value = Int(digits) else { return nil }
+            rest = rest.dropFirst(digits.count).drop { $0 == " " }
+            guard let unit = units.first(where: { unit in unit.names.contains { rest.hasPrefix($0) } }),
+                  let name = unit.names.first(where: { rest.hasPrefix($0) })
+            else { return nil }
+            total += value * unit.minutes
+            rest = rest.dropFirst(name.count)
+            matched = true
+        }
+        return matched ? total : nil
+    }
+
+    /// Time left until `end` as a clock: "4:05", or "1:02:03" from an hour up.
+    public static func clock(until end: Date, at now: Date) -> String {
+        let seconds = max(0, Int(end.timeIntervalSince(now).rounded(.up)))
+        let (hours, minutes, rest) = (seconds / 3600, seconds / 60 % 60, seconds % 60)
+        return hours > 0
+            ? String(format: "%d:%02d:%02d", hours, minutes, rest)
+            : String(format: "%d:%02d", minutes, rest)
+    }
+
     /// Whole minutes left until `end`, rounded up and never less than one.
     public static func minutesLeft(until end: Date, at now: Date) -> Int {
         max(1, Int((end.timeIntervalSince(now) / 60).rounded(.up)))

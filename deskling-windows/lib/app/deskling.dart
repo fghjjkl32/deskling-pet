@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 
 import '../core/bubble_guard.dart';
+import '../core/input_box.dart';
 import '../core/paths.dart';
 import '../core/reminders.dart';
 import '../core/skin.dart';
@@ -30,6 +32,9 @@ class Deskling {
   /// The reminder the pet is showing until it or its bubble is clicked.
   Reminder? _alert;
   final _bubbleGuard = BubbleGuard();
+
+  /// False after the countdown bubble was clicked away, until the next focus session or timer starts or a reminder fires.
+  bool _showCountdown = true;
 
   late final String _bundledSkinsDirectory =
       p.join(p.dirname(Platform.resolvedExecutable), 'data', 'flutter_assets', 'assets', 'skins');
@@ -81,7 +86,10 @@ class Deskling {
 
   void _tickReminders() {
     final due = reminders.tick(DateTime.now());
-    if (due.isNotEmpty) _alert = due.last;
+    if (due.isNotEmpty) {
+      _alert = due.last;
+      _showCountdown = true;
+    }
     _refreshPet();
   }
 
@@ -90,18 +98,58 @@ class Deskling {
     _refreshPet();
   }
 
+  /// A click on an alert clears it; a click on the countdown hides the countdown.
   void bubbleClicked() {
-    if (_bubbleGuard.acceptsClick(DateTime.now())) clearAlert();
+    final key = _bubbleGuard.shownKey;
+    if (key == null || !_bubbleGuard.acceptsClick(DateTime.now())) return;
+    if (key.startsWith('alert')) {
+      clearAlert();
+    } else {
+      _showCountdown = false;
+      _refreshPet();
+    }
   }
 
-  /// An alert shows `waiting` and its bubble; a focus phase without one shows `working`. A hidden pet shows no bubble.
+  /// An alert shows `waiting`; a focus phase without one shows `working`. The bubble shows the alert or the countdown.
+  /// A hidden pet shows no bubble.
   void _refreshPet() {
     final alert = _alert;
+    final now = DateTime.now();
     pet.alerting = alert != null;
     pet.focusing = alert == null && reminders.phase == FocusPhase.focus;
-    final text = alert == null || preferences.petHidden ? null : PetPresentation.message(alert, language);
-    _bubbleGuard.update(text, DateTime.now());
-    pet.bubbleText = text;
+    final content = preferences.petHidden
+        ? null
+        : PetPresentation.bubble(
+            alert: alert, reminders: reminders, showCountdown: _showCountdown, now: now, language: language);
+    _bubbleGuard.update(content?.key, now);
+    pet.bubbleText = content?.text;
+  }
+
+  void _startTimer(int minutes) {
+    reminders.startTimer(minutes, DateTime.now());
+    _showCountdown = true;
+    _refreshPet();
+  }
+
+  /// Asks for a timer length until the user types a valid one or cancels.
+  Future<void> _askForTimer() async {
+    final arguments = InputBox.arguments(title: _t(Txt.customTimerTitle), body: _t(Txt.customTimerBody), initial: '25');
+    while (true) {
+      final String answer;
+      try {
+        final result = await Process.run('powershell.exe', arguments, stdoutEncoding: utf8);
+        answer = '${result.stdout}'.trim();
+      } on Object {
+        return;
+      }
+      if (answer.isEmpty) return;
+      final minutes = Reminders.parseMinutes(answer);
+      if (minutes != null) {
+        _startTimer(minutes);
+        return;
+      }
+      Native.alert(_t(Txt.customTimerTitle), _t(Txt.invalidDuration));
+    }
   }
 
   // Skins
@@ -157,14 +205,19 @@ class Deskling {
   TrayActions _trayActions() => TrayActions(
         startFocus: () {
           reminders.startFocus(DateTime.now());
+          _showCountdown = true;
           _refreshPet();
         },
         stopFocus: () {
           reminders.stopFocus();
           _refreshPet();
         },
-        startTimer: (minutes) => reminders.startTimer(minutes, DateTime.now()),
-        cancelTimer: reminders.cancelTimer,
+        startTimer: _startTimer,
+        customTimer: () => unawaited(_askForTimer()),
+        cancelTimer: () {
+          reminders.cancelTimer();
+          _refreshPet();
+        },
         toggleStretch: () {
           final enabled = !reminders.stretchEnabled;
           reminders.setStretch(enabled: enabled, now: DateTime.now());

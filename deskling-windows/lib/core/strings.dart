@@ -31,6 +31,17 @@ enum Txt {
   timerMinutes('%d분', '%d min'),
   cancelTimer('타이머 취소하기 (%d분 남음)', 'Cancel Timer (%d min left)'),
   stretchReminder('한 시간마다 스트레칭 알림', 'Stretch Reminder Every Hour'),
+  customTimer('직접 입력하기…', 'Custom…'),
+  customTimerTitle('타이머 시간', 'Timer Length'),
+  customTimerBody(
+    '몇 분 뒤에 알려 드릴지 입력합니다. 25처럼 분으로 쓰거나, 1:30처럼 시간과 분으로 씁니다.',
+    'Enter how long to wait: minutes such as 25, or hours and minutes such as 1:30.',
+  ),
+  start('시작하기', 'Start'),
+  cancel('취소', 'Cancel'),
+  invalidDuration('1분에서 24시간 사이로 입력해야 합니다.', 'Enter a length between 1 minute and 24 hours.'),
+  countdownFocus('집중', 'Focus'),
+  countdownBreak('휴식', 'Break'),
   focusEndedMessage('집중 시간이 끝났습니다. 이제 5분 동안 쉬는 시간입니다.', 'Focus time is over. Take a 5-minute break.'),
   breakEndedMessage('쉬는 시간이 끝났습니다.', 'Your break is over.'),
   stretchMessage('잠깐 일어나서 몸을 풀고 물을 마실 시간입니다.', 'Stand up, stretch, and drink some water.'),
@@ -63,6 +74,35 @@ class PetPresentation {
     if (isAlerting) return PetPose.waiting;
     if (isFocusing) return PetPose.working;
     return isWalking ? PetPose.walk : PetPose.idle;
+  }
+
+  /// What the speech bubble shows: a due reminder, or else the time left on the focus session and the timer,
+  /// one per line. `key` stays the same while the same kind of bubble counts down, so a click on it can be
+  /// told apart from a click on a new bubble. Returns null when there is nothing to show.
+  static ({String key, String text})? bubble({
+    required Reminder? alert,
+    required Reminders reminders,
+    required bool showCountdown,
+    required DateTime now,
+    required Language language,
+  }) {
+    if (alert != null) return (key: 'alert-${alert.name}', text: message(alert, language));
+    if (!showCountdown) return null;
+    final lines = <String>[];
+    var key = 'countdown';
+    final phase = reminders.phase;
+    final phaseEnds = reminders.phaseEnds;
+    if (phase != null && phaseEnds != null) {
+      final label = phase == FocusPhase.focus ? Txt.countdownFocus : Txt.countdownBreak;
+      lines.add('${label.of(language)} ${Reminders.clock(phaseEnds, now)}');
+      key += '-${phase.name}';
+    }
+    final timerEnds = reminders.timerEnds;
+    if (timerEnds != null) {
+      lines.add('${Txt.timer.of(language)} ${Reminders.clock(timerEnds, now)}');
+      key += '-timer';
+    }
+    return lines.isEmpty ? null : (key: key, text: lines.join('\n'));
   }
 
   static String message(Reminder reminder, Language language) => switch (reminder) {

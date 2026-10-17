@@ -9,6 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var reminders = Reminders()
     /// The reminder on show until the user clicks the bubble or the pet.
     private var alert: Reminder?
+    /// False after the countdown bubble was clicked away, until the next focus session or timer starts.
+    private var showCountdown = true
     private var pet: PetWindowController?
     private var menu: StatusMenuController?
     private var reminderTimer: Timer?
@@ -45,7 +47,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pet.setHidden(preferences.petHidden)
         pet.start()
         self.pet = pet
-        bubble.onDismiss = { [weak self] in self?.dismissAlert() }
+        bubble.onDismiss = { [weak self] key in
+            guard let self else { return }
+            if key.hasPrefix("alert") { self.dismissAlert() } else { self.showCountdown = false }
+        }
 
         if preferences.stretchEnabled { reminders.setStretch(enabled: true, at: Date()) }
         let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.tickReminders() }
@@ -62,7 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func tickReminders() {
         if let latest = reminders.tick(at: Date()).last {
             alert = latest
-            bubble.clearDismissal()
+            showCountdown = true
         }
         render()
     }
@@ -78,8 +83,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let focusing = reminders.phase == .focus
         if pet.isAlerting != (alert != nil) { pet.isAlerting = alert != nil }
         if pet.isFocusing != focusing { pet.isFocusing = focusing }
-        let message = alert.map { PetPresentation.message(for: $0, language: language) }
-        bubble.update(text: preferences.petHidden ? nil : message, anchor: pet.panel.frame)
+        let content = PetPresentation.bubble(alert: alert, reminders: reminders, showCountdown: showCountdown, now: Date(), language: language)
+        bubble.update(text: preferences.petHidden ? nil : content?.text, key: content?.key ?? "", anchor: pet.panel.frame)
     }
 
     // MARK: - Skins
@@ -128,13 +133,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             toggleFocus: { [unowned self] in
                 if self.reminders.phase == nil {
                     self.reminders.startFocus(at: Date())
+                    self.showCountdown = true
                 } else {
                     self.reminders.stopFocus()
                 }
                 self.render()
             },
-            startTimer: { [unowned self] minutes in self.reminders.startTimer(minutes: minutes, at: Date()) },
-            cancelTimer: { [unowned self] in self.reminders.cancelTimer() },
+            startTimer: { [unowned self] minutes in self.startTimer(minutes: minutes) },
+            customTimer: { [unowned self] in self.askForTimer() },
+            cancelTimer: { [unowned self] in
+                self.reminders.cancelTimer()
+                self.render()
+            },
             toggleStretch: { [unowned self] in
                 self.preferences.stretchEnabled.toggle()
                 self.reminders.setStretch(enabled: self.preferences.stretchEnabled, at: Date())
@@ -158,6 +168,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             toggleLaunchAtLogin: { [unowned self] in self.toggleLaunchAtLogin() }
         )
+    }
+
+    private func startTimer(minutes: Int) {
+        reminders.startTimer(minutes: minutes, at: Date())
+        showCountdown = true
+        render()
+    }
+
+    /// Asks for a timer length until the user types a valid one or cancels.
+    private func askForTimer() {
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
+        field.placeholderString = "25, 1:30"
+        let alert = NSAlert()
+        alert.messageText = text(.customTimerTitle)
+        alert.informativeText = text(.customTimerBody)
+        alert.accessoryView = field
+        alert.addButton(withTitle: text(.start))
+        alert.addButton(withTitle: text(.cancel))
+        alert.window.initialFirstResponder = field
+        NSApp.activate(ignoringOtherApps: true)
+        while alert.runModal() == .alertFirstButtonReturn {
+            if let minutes = Reminders.parseMinutes(field.stringValue) {
+                startTimer(minutes: minutes)
+                return
+            }
+            alert.informativeText = text(.invalidDuration) + "\n" + text(.customTimerBody)
+        }
     }
 
     private func toggleLaunchAtLogin() {

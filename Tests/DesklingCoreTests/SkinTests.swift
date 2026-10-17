@@ -176,26 +176,38 @@ final class SkinTests: XCTestCase {
         XCTAssertEqual(SkinLoader.list(in: root.appendingPathComponent("missing")), [])
     }
 
-    /// The bundled skins ship no `fall` image; it borrows the `drag` swing.
-    private static let bundledPoses: [PetPose] = [.idle, .walk, .happy, .working, .waiting, .drag]
-    private static let bundledSkins = ["boy": "Boy", "girl": "Girl"]
+    private struct Bundled {
+        let name: String
+        let height: Double
+        let poses: [PetPose]
+        /// Frames in idle, walk and happy.
+        let frames: [Int]
+    }
+
+    /// The boy is drawn frame by frame and has every pose. The girl is animated from one drawing and
+    /// ships no `fall` image, so she borrows the `drag` swing.
+    private static let bundledSkins = [
+        "boy": Bundled(name: "Boy", height: 118, poses: PetPose.allCases, frames: [6, 8, 6]),
+        "girl": Bundled(name: "Girl", height: 130, poses: [.idle, .walk, .happy, .working, .waiting, .drag], frames: [16, 8, 16]),
+    ]
 
     private var repository: URL {
         URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
     }
 
     func testBundledSkinsLoadWithAnimations() throws {
-        for (id, name) in Self.bundledSkins {
+        for (id, expected) in Self.bundledSkins {
             let skin = try XCTUnwrap(SkinLoader.load(directory: repository.appendingPathComponent("Resources/skins/\(id)")), id)
-            XCTAssertEqual(skin.name, name)
-            XCTAssertEqual(skin.height, 130)
-            for pose in Self.bundledPoses {
+            XCTAssertEqual(skin.name, expected.name)
+            XCTAssertEqual(skin.height, expected.height)
+            for pose in expected.poses {
                 XCTAssertEqual(skin.url(for: pose).lastPathComponent, "\(pose.rawValue).png", id)
             }
-            XCTAssertEqual(skin.url(for: .fall).lastPathComponent, "drag.png", id)
-            XCTAssertEqual(SpriteFrames.load(url: skin.url(for: .idle))?.images.count, 16, id)
-            XCTAssertEqual(SpriteFrames.load(url: skin.url(for: .walk))?.images.count, 8, id)
-            XCTAssertEqual(SpriteFrames.load(url: skin.url(for: .happy))?.images.count, 16, id)
+            if !expected.poses.contains(.fall) {
+                XCTAssertEqual(skin.url(for: .fall).lastPathComponent, "drag.png", id)
+            }
+            let counts = [PetPose.idle, .walk, .happy].map { SpriteFrames.load(url: skin.url(for: $0))?.images.count }
+            XCTAssertEqual(counts, expected.frames, id)
         }
     }
 
@@ -208,8 +220,8 @@ final class SkinTests: XCTestCase {
     }
 
     func testBundledDefaultSkinImagesAllLoadWithinBudget() throws {
-        for id in Self.bundledSkins.keys {
-            for pose in Self.bundledPoses {
+        for (id, expected) in Self.bundledSkins {
+            for pose in expected.poses {
                 let url = repository.appendingPathComponent("Resources/skins/\(id)/\(pose.rawValue).png")
                 XCTAssertNotNil(SpriteFrames.load(url: url), "\(id)/\(pose.rawValue)")
             }
