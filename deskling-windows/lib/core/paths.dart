@@ -16,5 +16,4 @@ class AppPaths {
 
   String get supportDirectory => _windows.join(_appData, 'Deskling Pet');
   String get skinsDirectory => _windows.join(supportDirectory, 'skins');
-  String get instanceLock => _windows.join(supportDirectory, 'instance.lock');
 }

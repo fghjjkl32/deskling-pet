@@ -7,7 +7,6 @@ void main() {
     final paths = AppPaths({'APPDATA': r'C:\Users\Me\AppData\Roaming', 'USERPROFILE': r'C:\Users\Me'}, context: p.windows);
     expect(paths.supportDirectory, r'C:\Users\Me\AppData\Roaming\Deskling Pet');
     expect(paths.skinsDirectory, r'C:\Users\Me\AppData\Roaming\Deskling Pet\skins');
-    expect(paths.instanceLock, r'C:\Users\Me\AppData\Roaming\Deskling Pet\instance.lock');
   });
 
   test('without APPDATA the roaming folder is found from the profile', () {
